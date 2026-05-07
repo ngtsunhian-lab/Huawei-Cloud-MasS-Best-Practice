@@ -75,6 +75,8 @@ claude --model claude-haiku-4-5
 claude-huaweicloud
 ```
 
+![Interactive Model Picker](交互界面截图.PNG)
+
 Output:
 
 ```
@@ -92,6 +94,8 @@ Output:
 
   Select (1-7) or Enter for default:
 ```
+
+![Claude Code Session](进入截图.PNG)
 
 #### Huawei Cloud MaaS - Direct
 
@@ -353,6 +357,8 @@ claude --model claude-haiku-4-5
 claude-huaweicloud
 ```
 
+![交互式模型选择](交互界面截图.PNG)
+
 输出：
 
 ```
@@ -370,6 +376,8 @@ claude-huaweicloud
 
   Select (1-7) or Enter for default:
 ```
+
+![Claude Code 会话界面](进入截图.PNG)
 
 #### 华为云 MaaS - 直接指定
 
