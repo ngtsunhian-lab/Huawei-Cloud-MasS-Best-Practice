@@ -189,16 +189,72 @@ Reload in current session:
 . $PROFILE
 ```
 
-#### macOS / Linux (Bash/Zsh)
+#### macOS (Zsh)
+
+> **Note:** Zsh is the default shell on macOS. The Bash config below will NOT work in Zsh due to syntax differences (`${!array[@]}` and `read -p` are Bash-only).
 
 Edit shell config:
 
 ```bash
-# Bash
-nano ~/.bashrc
-
-# Zsh (macOS default)
 nano ~/.zshrc
+```
+
+Add the following content:
+
+```zsh
+claude-huaweicloud() {
+    local hwToken="<YOUR_TOKEN>"
+    local hwUrl="<YOUR_BASE_URL>"
+    local hwModels=("glm-5.1" "glm-5" "deepseek-v4-flash" "DeepSeek-V3" "deepseek-v3.2" "deepseek-v3.1-terminus" "qwen3-32b")
+    local hwDescs=("GLM 5.1 (default)" "GLM 5" "DeepSeek V4 Flash" "DeepSeek V3" "DeepSeek V3.2" "DeepSeek V3.1 Terminus" "Qwen3 32B")
+    local model="${1:-}"
+    if [ -z "$model" ]; then
+        echo ""
+        echo "  +---------------------------------------------+"
+        echo "  |      Huawei Cloud MaaS Model Picker         |"
+        echo "  +---------------------------------------------+"
+        echo ""
+        local i
+        for (( i=1; i<=${#hwModels[@]}; i++ )); do
+            printf "  [%d] %-25s %s\n" "$i" "${hwModels[$i]}" "${hwDescs[$i]}"
+        done
+        echo ""
+        read "choice?  Select (1-${#hwModels[@]}) or Enter for default: "
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#hwModels[@]}" ]; then
+            model="${hwModels[$choice]}"
+        else
+            model="glm-5.1"
+        fi
+        echo ""
+        echo "  Starting: $model"
+        echo ""
+    fi
+    ANTHROPIC_AUTH_TOKEN="$hwToken" \
+    ANTHROPIC_BASE_URL="$hwUrl" \
+    ANTHROPIC_MODEL="$model" \
+    claude --model "$model"
+}
+
+# Zsh tab completion
+_claude_huaweicloud_complete() {
+    local -a models=("glm-5.1" "glm-5" "deepseek-v4-flash" "DeepSeek-V3" "deepseek-v3.2" "deepseek-v3.1-terminus" "qwen3-32b")
+    _describe 'model' models
+}
+compdef _claude_huaweicloud_complete claude-huaweicloud
+```
+
+Reload in current session:
+
+```bash
+source ~/.zshrc
+```
+
+#### Linux (Bash)
+
+Edit shell config:
+
+```bash
+nano ~/.bashrc
 ```
 
 Add the following content:
@@ -237,32 +293,17 @@ claude-huaweicloud() {
 }
 
 # Bash tab completion
-if [ -n "$BASH_VERSION" ]; then
-    _claude_huaweicloud_complete() {
-        local cur="${COMP_WORDS[COMP_CWORD]}"
-        COMPREPLY=($(compgen -W "glm-5.1 glm-5 deepseek-v4-flash DeepSeek-V3 deepseek-v3.2 deepseek-v3.1-terminus qwen3-32b" -- "$cur"))
-    }
-    complete -F _claude_huaweicloud_complete claude-huaweicloud
-fi
-
-# Zsh tab completion
-if [ -n "$ZSH_VERSION" ]; then
-    _claude_huaweicloud_complete() {
-        local -a models=("glm-5.1" "glm-5" "deepseek-v4-flash" "DeepSeek-V3" "deepseek-v3.2" "deepseek-v3.1-terminus" "qwen3-32b")
-        _describe 'model' models
-    }
-    compdef _claude_huaweicloud_complete claude-huaweicloud
-fi
+_claude_huaweicloud_complete() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    COMPREPLY=($(compgen -W "glm-5.1 glm-5 deepseek-v4-flash DeepSeek-V3 deepseek-v3.2 deepseek-v3.1-terminus qwen3-32b" -- "$cur"))
+}
+complete -F _claude_huaweicloud_complete claude-huaweicloud
 ```
 
 Reload in current session:
 
 ```bash
-# Bash
 source ~/.bashrc
-
-# Zsh
-source ~/.zshrc
 ```
 
 #### Windows (Git Bash / WSL)
@@ -471,16 +512,72 @@ Register-ArgumentCompleter -CommandName claude-huaweicloud -ParameterName Model 
 . $PROFILE
 ```
 
-#### macOS / Linux（Bash / Zsh）
+#### macOS（Zsh）
+
+> **注意：** Zsh 是 macOS 的默认 Shell。下方的 Bash 配置在 Zsh 中**无法运行**，因为 `${!array[@]}` 和 `read -p` 是 Bash 专属语法。
 
 编辑 Shell 配置文件：
 
 ```bash
-# Bash
-nano ~/.bashrc
-
-# Zsh（macOS 默认）
 nano ~/.zshrc
+```
+
+添加以下内容：
+
+```zsh
+claude-huaweicloud() {
+    local hwToken="<YOUR_TOKEN>"
+    local hwUrl="<YOUR_BASE_URL>"
+    local hwModels=("glm-5.1" "glm-5" "deepseek-v4-flash" "DeepSeek-V3" "deepseek-v3.2" "deepseek-v3.1-terminus" "qwen3-32b")
+    local hwDescs=("GLM 5.1 (default)" "GLM 5" "DeepSeek V4 Flash" "DeepSeek V3" "DeepSeek V3.2" "DeepSeek V3.1 Terminus" "Qwen3 32B")
+    local model="${1:-}"
+    if [ -z "$model" ]; then
+        echo ""
+        echo "  +---------------------------------------------+"
+        echo "  |      Huawei Cloud MaaS Model Picker         |"
+        echo "  +---------------------------------------------+"
+        echo ""
+        local i
+        for (( i=1; i<=${#hwModels[@]}; i++ )); do
+            printf "  [%d] %-25s %s\n" "$i" "${hwModels[$i]}" "${hwDescs[$i]}"
+        done
+        echo ""
+        read "choice?  Select (1-${#hwModels[@]}) or Enter for default: "
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#hwModels[@]}" ]; then
+            model="${hwModels[$choice]}"
+        else
+            model="glm-5.1"
+        fi
+        echo ""
+        echo "  Starting: $model"
+        echo ""
+    fi
+    ANTHROPIC_AUTH_TOKEN="$hwToken" \
+    ANTHROPIC_BASE_URL="$hwUrl" \
+    ANTHROPIC_MODEL="$model" \
+    claude --model "$model"
+}
+
+# Zsh Tab 补全
+_claude_huaweicloud_complete() {
+    local -a models=("glm-5.1" "glm-5" "deepseek-v4-flash" "DeepSeek-V3" "deepseek-v3.2" "deepseek-v3.1-terminus" "qwen3-32b")
+    _describe 'model' models
+}
+compdef _claude_huaweicloud_complete claude-huaweicloud
+```
+
+当前会话生效：
+
+```bash
+source ~/.zshrc
+```
+
+#### Linux（Bash）
+
+编辑 Shell 配置文件：
+
+```bash
+nano ~/.bashrc
 ```
 
 添加以下内容：
@@ -519,32 +616,17 @@ claude-huaweicloud() {
 }
 
 # Bash Tab 补全
-if [ -n "$BASH_VERSION" ]; then
-    _claude_huaweicloud_complete() {
-        local cur="${COMP_WORDS[COMP_CWORD]}"
-        COMPREPLY=($(compgen -W "glm-5.1 glm-5 deepseek-v4-flash DeepSeek-V3 deepseek-v3.2 deepseek-v3.1-terminus qwen3-32b" -- "$cur"))
-    }
-    complete -F _claude_huaweicloud_complete claude-huaweicloud
-fi
-
-# Zsh Tab 补全
-if [ -n "$ZSH_VERSION" ]; then
-    _claude_huaweicloud_complete() {
-        local -a models=("glm-5.1" "glm-5" "deepseek-v4-flash" "DeepSeek-V3" "deepseek-v3.2" "deepseek-v3.1-terminus" "qwen3-32b")
-        _describe 'model' models
-    }
-    compdef _claude_huaweicloud_complete claude-huaweicloud
-fi
+_claude_huaweicloud_complete() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    COMPREPLY=($(compgen -W "glm-5.1 glm-5 deepseek-v4-flash DeepSeek-V3 deepseek-v3.2 deepseek-v3.1-terminus qwen3-32b" -- "$cur"))
+}
+complete -F _claude_huaweicloud_complete claude-huaweicloud
 ```
 
 当前会话生效：
 
 ```bash
-# Bash
 source ~/.bashrc
-
-# Zsh
-source ~/.zshrc
 ```
 
 #### Windows（Git Bash / WSL）
