@@ -1,0 +1,19 @@
+model_list:
+  - model_name: glm-5.1
+    litellm_params:
+      model: openai/glm-5.1
+      api_base: os.environ/MAAS_API_BASE
+      api_key: os.environ/MAAS_API_KEY
+    model_info:
+      mode: chat
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      max_input_tokens: 128000
+      max_output_tokens: 8192
+
+litellm_settings:
+  drop_params: true
+  set_verbose: false
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
