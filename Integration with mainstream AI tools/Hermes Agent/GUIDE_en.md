@@ -32,13 +32,13 @@ You need:
 
 ## 3. Install Hermes Agent
 
+### macOS / Linux
+
 Run the official installer:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
 ```
-
-Works on Linux, macOS, WSL2, and Android via Termux.
 
 After installation, reload your shell:
 
@@ -47,7 +47,40 @@ source ~/.zshrc    # macOS
 source ~/.bashrc   # Linux
 ```
 
-Verify:
+### Windows (WSL2)
+
+Hermes Agent does not support native Windows. You must use **WSL2** (Windows Subsystem for Linux).
+
+1. Install WSL2 if you haven't already:
+
+```powershell
+# Run in PowerShell as Administrator
+wsl --install
+```
+
+2. Open a WSL2 terminal (Ubuntu by default), then run the installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
+```
+
+3. Reload your shell:
+
+```bash
+source ~/.bashrc
+```
+
+> **Note:** All Hermes commands run inside WSL2. The config files are located at `/home/<username>/.hermes/` inside the WSL filesystem, not in the Windows `C:\Users\` path.
+
+### Android (Termux)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
+```
+
+The installer automatically detects Termux and installs a compatible subset of dependencies. See the [Termux guide](https://hermes-agent.nousresearch.com/docs/getting-started/termux) for details.
+
+### Verify Installation
 
 ```bash
 hermes version
@@ -74,10 +107,28 @@ Hermes stores configuration in two files:
 
 Edit `~/.hermes/.env` and set the GLM provider credentials:
 
+#### macOS / Linux
+
+```bash
+nano ~/.hermes/.env
+```
+
+Add the following lines:
+
 ```bash
 GLM_API_KEY=YOUR_HUAWEI_CLOUD_MAAS_API_KEY
 GLM_BASE_URL=https://api-ap-southeast-1.modelarts-maas.com/v1
 ```
+
+#### Windows (WSL2)
+
+Open a WSL2 terminal, then:
+
+```bash
+nano ~/.hermes/.env
+```
+
+Add the same lines as above. The file is at `/home/<username>/.hermes/.env` inside WSL.
 
 Replace `YOUR_HUAWEI_CLOUD_MAAS_API_KEY` with your actual Huawei Cloud MaaS API token.
 
@@ -87,6 +138,14 @@ Replace `YOUR_HUAWEI_CLOUD_MAAS_API_KEY` with your actual Huawei Cloud MaaS API 
 
 Edit `~/.hermes/config.yaml` and update the `model` section:
 
+#### macOS / Linux / WSL2
+
+```bash
+nano ~/.hermes/config.yaml
+```
+
+Update the `model` section:
+
 ```yaml
 model:
   default: "glm-5.1"
@@ -94,7 +153,7 @@ model:
   base_url: "https://api-ap-southeast-1.modelarts-maas.com/v1"
 ```
 
-Or use the CLI commands:
+Or use the CLI commands (all platforms):
 
 ```bash
 hermes config set model.default glm-5.1

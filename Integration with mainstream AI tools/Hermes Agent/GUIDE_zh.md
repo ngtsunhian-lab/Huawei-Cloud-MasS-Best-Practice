@@ -32,13 +32,13 @@ flowchart LR
 
 ## 3. 安装 Hermes Agent
 
+### macOS / Linux
+
 运行官方安装脚本：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
 ```
-
-支持 Linux、macOS、WSL2 以及 Android（通过 Termux）。
 
 安装完成后，重新加载 Shell：
 
@@ -47,7 +47,40 @@ source ~/.zshrc    # macOS
 source ~/.bashrc   # Linux
 ```
 
-验证安装：
+### Windows（WSL2）
+
+Hermes Agent 不支持原生 Windows，必须使用 **WSL2**（Windows Subsystem for Linux）。
+
+1. 如果尚未安装 WSL2，先安装：
+
+```powershell
+# 在 PowerShell（管理员）中运行
+wsl --install
+```
+
+2. 打开 WSL2 终端（默认为 Ubuntu），然后运行安装脚本：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
+```
+
+3. 重新加载 Shell：
+
+```bash
+source ~/.bashrc
+```
+
+> **注意：** 所有 Hermes 命令都在 WSL2 内运行。配置文件位于 WSL 文件系统内的 `/home/<username>/.hermes/`，而非 Windows 的 `C:\Users\` 路径。
+
+### Android（Termux）
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
+```
+
+安装脚本会自动检测 Termux 环境并安装兼容的依赖子集。详见 [Termux 指南](https://hermes-agent.nousresearch.com/docs/getting-started/termux)。
+
+### 验证安装
 
 ```bash
 hermes version
@@ -74,10 +107,28 @@ Hermes 的配置存储在两个文件中：
 
 编辑 `~/.hermes/.env`，设置 GLM 供应商凭据：
 
+#### macOS / Linux
+
+```bash
+nano ~/.hermes/.env
+```
+
+添加以下内容：
+
 ```bash
 GLM_API_KEY=YOUR_HUAWEI_CLOUD_MAAS_API_KEY
 GLM_BASE_URL=https://api-ap-southeast-1.modelarts-maas.com/v1
 ```
+
+#### Windows（WSL2）
+
+打开 WSL2 终端，然后：
+
+```bash
+nano ~/.hermes/.env
+```
+
+添加与上方相同的内容。文件位于 WSL 内的 `/home/<username>/.hermes/.env`。
 
 将 `YOUR_HUAWEI_CLOUD_MAAS_API_KEY` 替换为你的华为云 MaaS API Token。
 
@@ -87,6 +138,14 @@ GLM_BASE_URL=https://api-ap-southeast-1.modelarts-maas.com/v1
 
 编辑 `~/.hermes/config.yaml`，更新 `model` 部分：
 
+#### macOS / Linux / WSL2
+
+```bash
+nano ~/.hermes/config.yaml
+```
+
+更新 `model` 部分：
+
 ```yaml
 model:
   default: "glm-5.1"
@@ -94,7 +153,7 @@ model:
   base_url: "https://api-ap-southeast-1.modelarts-maas.com/v1"
 ```
 
-或使用 CLI 命令：
+或使用 CLI 命令（所有平台通用）：
 
 ```bash
 hermes config set model.default glm-5.1
