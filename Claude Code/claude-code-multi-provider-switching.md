@@ -129,7 +129,23 @@ claude-huaweicloud -Resume "session-id"  # specific session
 claude-huaweicloud -Model glm-5 -DangerouslySkipPermissions -Continue -VerboseFlag
 ```
 
+```bash
+# Bash / Zsh (macOS / Linux)
+claude-huaweicloud --dangerously-skip-permissions
+claude-huaweicloud --model deepseek-v4-flash --print --permission-mode bypassPermissions
+claude-huaweicloud --resume              # interactive picker
+claude-huaweicloud --resume session-id   # specific session
+claude-huaweicloud --model glm-5 --continue --verbose
+
+# Tab completion (Bash / Zsh)
+claude-huaweicloud --model deep<Tab>
+claude-huaweicloud --dan<Tab>            # completes to --dangerously-skip-permissions
+claude-huaweicloud --effort h<Tab>       # completes to "high"
+```
+
 ### Supported CLI Flags
+
+> **Bash / Zsh note:** On macOS and Linux, `claude-huaweicloud` passes all flags directly to `claude` using their native CLI names (e.g., `--dangerously-skip-permissions` instead of `-DangerouslySkipPermissions`). The PowerShell parameter names below are Windows-only.
 
 #### Switch Flags (no value needed)
 
@@ -419,18 +435,41 @@ claude-huaweicloud() {
     local hwUrl="<YOUR_BASE_URL>"
     local hwModels=("glm-5.1" "glm-5" "deepseek-v4-flash" "DeepSeek-V3" "deepseek-v3.2" "deepseek-v3.1-terminus" "qwen3-32b")
     local hwDescs=("GLM 5.1 (default)" "GLM 5" "DeepSeek V4 Flash" "DeepSeek V3" "DeepSeek V3.2" "DeepSeek V3.1 Terminus" "Qwen3 32B")
-    local model="${1:-}"
-    if [ -z "$model" ]; then
+    local model=""
+    local passthrough=()
+
+    # Parse arguments: extract --model/-m, pass everything else to claude
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -m|--model)
+                if [[ -n "${2:-}" ]]; then model="$2"; shift 2; else shift; fi
+                ;;
+            --model=*)
+                model="${1#--model=}"; shift
+                ;;
+            *)
+                passthrough+=("$1"); shift
+                ;;
+        esac
+    done
+
+    if [[ -z "$model" ]]; then
         echo ""
         echo "  +---------------------------------------------+"
         echo "  |      Huawei Cloud MaaS Model Picker         |"
         echo "  +---------------------------------------------+"
         echo ""
+        local i
         for i in "${!hwModels[@]}"; do
             printf "  [%d] %-25s %s\n" "$((i+1))" "${hwModels[$i]}" "${hwDescs[$i]}"
         done
         echo ""
-        read -p "  Select (1-${#hwModels[@]}) or Enter for default: " choice
+        local choice
+        if [ -n "$ZSH_VERSION" ]; then
+            read "choice?  Select (1-${#hwModels[@]}) or Enter for default: "
+        else
+            read -p "  Select (1-${#hwModels[@]}) or Enter for default: " choice
+        fi
         if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#hwModels[@]}" ]; then
             model="${hwModels[$((choice-1))]}"
         else
@@ -440,17 +479,37 @@ claude-huaweicloud() {
         echo "  Starting: $model"
         echo ""
     fi
+
     ANTHROPIC_AUTH_TOKEN="$hwToken" \
     ANTHROPIC_BASE_URL="$hwUrl" \
     ANTHROPIC_MODEL="$model" \
-    claude --model "$model"
+    claude --model "$model" "${passthrough[@]}"
 }
 
 # Bash tab completion
 if [ -n "$BASH_VERSION" ]; then
     _claude_huaweicloud_complete() {
         local cur="${COMP_WORDS[COMP_CWORD]}"
-        COMPREPLY=($(compgen -W "glm-5.1 glm-5 deepseek-v4-flash DeepSeek-V3 deepseek-v3.2 deepseek-v3.1-terminus qwen3-32b" -- "$cur"))
+        local prev="${COMP_WORDS[COMP_CWORD-1]}"
+        case "$prev" in
+            --model|-m)
+                COMPREPLY=($(compgen -W "glm-5.1 glm-5 deepseek-v4-flash DeepSeek-V3 deepseek-v3.2 deepseek-v3.1-terminus qwen3-32b" -- "$cur"))
+                return ;;
+            --effort)
+                COMPREPLY=($(compgen -W "low medium high xhigh max" -- "$cur"))
+                return ;;
+            --permission-mode)
+                COMPREPLY=($(compgen -W "acceptEdits auto bypassPermissions default dontAsk plan" -- "$cur"))
+                return ;;
+            --output-format)
+                COMPREPLY=($(compgen -W "text json stream-json" -- "$cur"))
+                return ;;
+            --input-format)
+                COMPREPLY=($(compgen -W "text stream-json" -- "$cur"))
+                return ;;
+        esac
+        local flags="--model -m --dangerously-skip-permissions --continue -c --print -p --verbose --debug -d --bare --ide --chrome --no-chrome --fork-session --disable-slash-commands --strict-mcp-config --no-session-persistence --include-hook-events --include-partial-messages --replay-user-messages --exclude-dynamic-system-prompt-sections --brief --allow-dangerously-skip-permissions --add-dir --agent --agents --allowedTools --append-system-prompt --append-system-prompt-file --betas --disallowedTools --effort --fallback-model --file --from-pr --input-format --json-schema --max-budget-usd --mcp-config --name -n --output-format --permission-mode --plugin-dir --plugin-url --resume -r --session-id --setting-sources --settings --system-prompt --system-prompt-file --tools --worktree -w --debug-file --remote-control --remote-control-session-name-prefix --tmux"
+        COMPREPLY=($(compgen -W "$flags" -- "$cur"))
     }
     complete -F _claude_huaweicloud_complete claude-huaweicloud
 fi
@@ -458,8 +517,63 @@ fi
 # Zsh tab completion
 if [ -n "$ZSH_VERSION" ]; then
     _claude_huaweicloud_complete() {
-        local -a models=("glm-5.1" "glm-5" "deepseek-v4-flash" "DeepSeek-V3" "deepseek-v3.2" "deepseek-v3.1-terminus" "qwen3-32b")
-        _describe 'model' models
+        local -a models
+        models=("glm-5.1" "glm-5" "deepseek-v4-flash" "DeepSeek-V3" "deepseek-v3.2" "deepseek-v3.1-terminus" "qwen3-32b")
+        _arguments \
+            '(-m --model)'{-m,--model}'[Model to use]:model:(${models})' \
+            '--dangerously-skip-permissions[Bypass all permission checks]' \
+            '(--continue -c)'{-c,--continue}'[Continue most recent conversation]' \
+            '(--print -p)'{-p,--print}'[Print response and exit]' \
+            '--verbose[Override verbose mode]' \
+            '(--debug -d)'{-d,--debug}'[Enable debug mode]' \
+            '--bare[Minimal mode]' \
+            '--ide[Connect to IDE]' \
+            '--chrome[Enable Chrome integration]' \
+            '--no-chrome[Disable Chrome integration]' \
+            '--fork-session[Fork when resuming]' \
+            '--disable-slash-commands[Disable all skills]' \
+            '--strict-mcp-config[Only use MCP from --mcp-config]' \
+            '--no-session-persistence[Disable session persistence]' \
+            '--brief[Enable SendUserMessage tool]' \
+            '--allow-dangerously-skip-permissions[Enable bypass as option]' \
+            '--effort[Efort level]:effort:(low medium high xhigh max)' \
+            '--permission-mode[Permission mode]:mode:(acceptEdits auto bypassPermissions default dontAsk plan)' \
+            '--output-format[Output format]:format:(text json stream-json)' \
+            '--input-format[Input format]:format:(text stream-json)' \
+            '--add-dir[Additional directories]:dir:_dirs' \
+            '--agent[Agent]:agent:' \
+            '--agents[Agents JSON]:json:' \
+            '--allowedTools[Allowed tools]:tools:' \
+            '--append-system-prompt[Append system prompt]:prompt:' \
+            '--append-system-prompt-file[Append system prompt file]:file:_files' \
+            '--betas[Beta headers]:betas:' \
+            '--disallowedTools[Disallowed tools]:tools:' \
+            '--fallback-model[Fallback model]:model:' \
+            '--file[File resources]:specs:' \
+            '--from-pr[Resume from PR]:pr:' \
+            '--json-schema[JSON Schema]:schema:' \
+            '--max-budget-usd[Max budget]:amount:' \
+            '--mcp-config[MCP config]:config:_files' \
+            '(--name -n)'{-n,--name}'[Session name]:name:' \
+            '--plugin-dir[Plugin dir]:dir:_dirs' \
+            '--plugin-url[Plugin URL]:url:' \
+            '(--resume -r)'{-r,--resume}'[Resume session]:session:' \
+            '--session-id[Session ID]:id:' \
+            '--setting-sources[Setting sources]:sources:' \
+            '--settings[Settings file]:file:_files' \
+            '--system-prompt[System prompt]:prompt:' \
+            '--system-prompt-file[System prompt file]:file:_files' \
+            '--tools[Available tools]:tools:' \
+            '(--worktree -w)'{-w,--worktree}'[Create worktree]:name:' \
+            '--debug-file[Debug log file]:file:_files' \
+            '--remote-control[Remote control]:name:' \
+            '--remote-control-session-name-prefix[RC name prefix]:prefix:' \
+            '--tmux[Create tmux session]' \
+            '--include-hook-events[Include hook events]' \
+            '--include-partial-messages[Include partial messages]' \
+            '--replay-user-messages[Replay user messages]' \
+            '--exclude-dynamic-system-prompt-sections[Exclude dynamic system prompt sections]' \
+            '*:prompt:'
     }
     compdef _claude_huaweicloud_complete claude-huaweicloud
 fi
@@ -621,7 +735,23 @@ claude-huaweicloud -Resume "session-id"  # 指定会话 ID
 claude-huaweicloud -Model glm-5 -DangerouslySkipPermissions -Continue -VerboseFlag
 ```
 
+```bash
+# Bash / Zsh（macOS / Linux）
+claude-huaweicloud --dangerously-skip-permissions
+claude-huaweicloud --model deepseek-v4-flash --print --permission-mode bypassPermissions
+claude-huaweicloud --resume              # 交互式选择器
+claude-huaweicloud --resume session-id   # 指定会话 ID
+claude-huaweicloud --model glm-5 --continue --verbose
+
+# Tab 补全（Bash / Zsh）
+claude-huaweicloud --model deep<Tab>
+claude-huaweicloud --dan<Tab>            # 补全为 --dangerously-skip-permissions
+claude-huaweicloud --effort h<Tab>       # 补全为 "high"
+```
+
 ### 支持的 CLI 标志
+
+> **Bash / Zsh 说明：** 在 macOS 和 Linux 上，`claude-huaweicloud` 直接使用 `claude` 原生 CLI 标志名称传递所有参数（如 `--dangerously-skip-permissions` 而非 `-DangerouslySkipPermissions`）。下表的 PowerShell 参数名仅适用于 Windows。
 
 #### 开关标志（无需值）
 
@@ -911,18 +1041,41 @@ claude-huaweicloud() {
     local hwUrl="<YOUR_BASE_URL>"
     local hwModels=("glm-5.1" "glm-5" "deepseek-v4-flash" "DeepSeek-V3" "deepseek-v3.2" "deepseek-v3.1-terminus" "qwen3-32b")
     local hwDescs=("GLM 5.1 (default)" "GLM 5" "DeepSeek V4 Flash" "DeepSeek V3" "DeepSeek V3.2" "DeepSeek V3.1 Terminus" "Qwen3 32B")
-    local model="${1:-}"
-    if [ -z "$model" ]; then
+    local model=""
+    local passthrough=()
+
+    # Parse arguments: extract --model/-m, pass everything else to claude
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -m|--model)
+                if [[ -n "${2:-}" ]]; then model="$2"; shift 2; else shift; fi
+                ;;
+            --model=*)
+                model="${1#--model=}"; shift
+                ;;
+            *)
+                passthrough+=("$1"); shift
+                ;;
+        esac
+    done
+
+    if [[ -z "$model" ]]; then
         echo ""
         echo "  +---------------------------------------------+"
         echo "  |      Huawei Cloud MaaS Model Picker         |"
         echo "  +---------------------------------------------+"
         echo ""
+        local i
         for i in "${!hwModels[@]}"; do
             printf "  [%d] %-25s %s\n" "$((i+1))" "${hwModels[$i]}" "${hwDescs[$i]}"
         done
         echo ""
-        read -p "  Select (1-${#hwModels[@]}) or Enter for default: " choice
+        local choice
+        if [ -n "$ZSH_VERSION" ]; then
+            read "choice?  Select (1-${#hwModels[@]}) or Enter for default: "
+        else
+            read -p "  Select (1-${#hwModels[@]}) or Enter for default: " choice
+        fi
         if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#hwModels[@]}" ]; then
             model="${hwModels[$((choice-1))]}"
         else
@@ -932,26 +1085,101 @@ claude-huaweicloud() {
         echo "  Starting: $model"
         echo ""
     fi
+
     ANTHROPIC_AUTH_TOKEN="$hwToken" \
     ANTHROPIC_BASE_URL="$hwUrl" \
     ANTHROPIC_MODEL="$model" \
-    claude --model "$model"
+    claude --model "$model" "${passthrough[@]}"
 }
 
-# Bash Tab 补全
+# Bash tab completion
 if [ -n "$BASH_VERSION" ]; then
     _claude_huaweicloud_complete() {
         local cur="${COMP_WORDS[COMP_CWORD]}"
-        COMPREPLY=($(compgen -W "glm-5.1 glm-5 deepseek-v4-flash DeepSeek-V3 deepseek-v3.2 deepseek-v3.1-terminus qwen3-32b" -- "$cur"))
+        local prev="${COMP_WORDS[COMP_CWORD-1]}"
+        case "$prev" in
+            --model|-m)
+                COMPREPLY=($(compgen -W "glm-5.1 glm-5 deepseek-v4-flash DeepSeek-V3 deepseek-v3.2 deepseek-v3.1-terminus qwen3-32b" -- "$cur"))
+                return ;;
+            --effort)
+                COMPREPLY=($(compgen -W "low medium high xhigh max" -- "$cur"))
+                return ;;
+            --permission-mode)
+                COMPREPLY=($(compgen -W "acceptEdits auto bypassPermissions default dontAsk plan" -- "$cur"))
+                return ;;
+            --output-format)
+                COMPREPLY=($(compgen -W "text json stream-json" -- "$cur"))
+                return ;;
+            --input-format)
+                COMPREPLY=($(compgen -W "text stream-json" -- "$cur"))
+                return ;;
+        esac
+        local flags="--model -m --dangerously-skip-permissions --continue -c --print -p --verbose --debug -d --bare --ide --chrome --no-chrome --fork-session --disable-slash-commands --strict-mcp-config --no-session-persistence --include-hook-events --include-partial-messages --replay-user-messages --exclude-dynamic-system-prompt-sections --brief --allow-dangerously-skip-permissions --add-dir --agent --agents --allowedTools --append-system-prompt --append-system-prompt-file --betas --disallowedTools --effort --fallback-model --file --from-pr --input-format --json-schema --max-budget-usd --mcp-config --name -n --output-format --permission-mode --plugin-dir --plugin-url --resume -r --session-id --setting-sources --settings --system-prompt --system-prompt-file --tools --worktree -w --debug-file --remote-control --remote-control-session-name-prefix --tmux"
+        COMPREPLY=($(compgen -W "$flags" -- "$cur"))
     }
     complete -F _claude_huaweicloud_complete claude-huaweicloud
 fi
 
-# Zsh Tab 补全
+# Zsh tab completion
 if [ -n "$ZSH_VERSION" ]; then
     _claude_huaweicloud_complete() {
-        local -a models=("glm-5.1" "glm-5" "deepseek-v4-flash" "DeepSeek-V3" "deepseek-v3.2" "deepseek-v3.1-terminus" "qwen3-32b")
-        _describe 'model' models
+        local -a models
+        models=("glm-5.1" "glm-5" "deepseek-v4-flash" "DeepSeek-V3" "deepseek-v3.2" "deepseek-v3.1-terminus" "qwen3-32b")
+        _arguments \
+            '(-m --model)'{-m,--model}'[Model to use]:model:(${models})' \
+            '--dangerously-skip-permissions[Bypass all permission checks]' \
+            '(--continue -c)'{-c,--continue}'[Continue most recent conversation]' \
+            '(--print -p)'{-p,--print}'[Print response and exit]' \
+            '--verbose[Override verbose mode]' \
+            '(--debug -d)'{-d,--debug}'[Enable debug mode]' \
+            '--bare[Minimal mode]' \
+            '--ide[Connect to IDE]' \
+            '--chrome[Enable Chrome integration]' \
+            '--no-chrome[Disable Chrome integration]' \
+            '--fork-session[Fork when resuming]' \
+            '--disable-slash-commands[Disable all skills]' \
+            '--strict-mcp-config[Only use MCP from --mcp-config]' \
+            '--no-session-persistence[Disable session persistence]' \
+            '--brief[Enable SendUserMessage tool]' \
+            '--allow-dangerously-skip-permissions[Enable bypass as option]' \
+            '--effort[Efort level]:effort:(low medium high xhigh max)' \
+            '--permission-mode[Permission mode]:mode:(acceptEdits auto bypassPermissions default dontAsk plan)' \
+            '--output-format[Output format]:format:(text json stream-json)' \
+            '--input-format[Input format]:format:(text stream-json)' \
+            '--add-dir[Additional directories]:dir:_dirs' \
+            '--agent[Agent]:agent:' \
+            '--agents[Agents JSON]:json:' \
+            '--allowedTools[Allowed tools]:tools:' \
+            '--append-system-prompt[Append system prompt]:prompt:' \
+            '--append-system-prompt-file[Append system prompt file]:file:_files' \
+            '--betas[Beta headers]:betas:' \
+            '--disallowedTools[Disallowed tools]:tools:' \
+            '--fallback-model[Fallback model]:model:' \
+            '--file[File resources]:specs:' \
+            '--from-pr[Resume from PR]:pr:' \
+            '--json-schema[JSON Schema]:schema:' \
+            '--max-budget-usd[Max budget]:amount:' \
+            '--mcp-config[MCP config]:config:_files' \
+            '(--name -n)'{-n,--name}'[Session name]:name:' \
+            '--plugin-dir[Plugin dir]:dir:_dirs' \
+            '--plugin-url[Plugin URL]:url:' \
+            '(--resume -r)'{-r,--resume}'[Resume session]:session:' \
+            '--session-id[Session ID]:id:' \
+            '--setting-sources[Setting sources]:sources:' \
+            '--settings[Settings file]:file:_files' \
+            '--system-prompt[System prompt]:prompt:' \
+            '--system-prompt-file[System prompt file]:file:_files' \
+            '--tools[Available tools]:tools:' \
+            '(--worktree -w)'{-w,--worktree}'[Create worktree]:name:' \
+            '--debug-file[Debug log file]:file:_files' \
+            '--remote-control[Remote control]:name:' \
+            '--remote-control-session-name-prefix[RC name prefix]:prefix:' \
+            '--tmux[Create tmux session]' \
+            '--include-hook-events[Include hook events]' \
+            '--include-partial-messages[Include partial messages]' \
+            '--replay-user-messages[Replay user messages]' \
+            '--exclude-dynamic-system-prompt-sections[Exclude dynamic system prompt sections]' \
+            '*:prompt:'
     }
     compdef _claude_huaweicloud_complete claude-huaweicloud
 fi
