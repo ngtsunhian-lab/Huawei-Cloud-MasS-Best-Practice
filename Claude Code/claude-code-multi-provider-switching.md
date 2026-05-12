@@ -375,7 +375,7 @@ function claude-huaweicloud {
     if ($RemoteControlSessionNamePrefix) { $claudeArgs.AddRange(@("--remote-control-session-name-prefix", $RemoteControlSessionNamePrefix)) | Out-Null }
     if ($Tmux)                         { $claudeArgs.Add("--tmux") | Out-Null }
     # Append any extra passthrough args
-    $claudeArgs.AddRange(@args) | Out-Null
+    if ($args.Count -gt 0) { $claudeArgs.AddRange($args) | Out-Null }
     # Set env and run
     $env:ANTHROPIC_AUTH_TOKEN = $hwToken
     $env:ANTHROPIC_BASE_URL = $hwUrl
@@ -867,7 +867,7 @@ function claude-huaweicloud {
     if ($RemoteControlSessionNamePrefix) { $claudeArgs.AddRange(@("--remote-control-session-name-prefix", $RemoteControlSessionNamePrefix)) | Out-Null }
     if ($Tmux)                         { $claudeArgs.Add("--tmux") | Out-Null }
     # Append any extra passthrough args
-    $claudeArgs.AddRange(@args) | Out-Null
+    if ($args.Count -gt 0) { $claudeArgs.AddRange($args) | Out-Null }
     # Set env and run
     $env:ANTHROPIC_AUTH_TOKEN = $hwToken
     $env:ANTHROPIC_BASE_URL = $hwUrl
